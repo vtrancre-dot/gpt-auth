@@ -1,0 +1,6 @@
+type: web
+name: gpt-auth-frontend
+env: node
+buildCommand: cd client && npm install && npm run build
+startCommand: cd client && npm start
+runtime: node-18
