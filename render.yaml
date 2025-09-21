@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: gpt-auth
+    env: python
+    buildCommand: "pip install -r requirements.txt && python -c 'from server.database import db, app; app.app_context().push(); db.create_all()'"
+    startCommand: "cd server && gunicorn --bind 0.0.0.0:$PORT webserver:app"
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: OAUTHLIB_INSECURE_TRANSPORT
+        value: "0"

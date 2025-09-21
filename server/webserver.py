@@ -17,7 +17,7 @@ GOOGLE_SCOPE = [
     "openid"
 ]
 
-DOMAIN_URL = "https://9979-122-171-21-142.ngrok-free.app"
+DOMAIN_URL = os.environ.get('RENDER_EXTERNAL_URL', 'http://localhost:5000')
 
 @app.route('/verify_token/<slug>', methods=['POST'])
 def verify_token(slug):
@@ -118,4 +118,6 @@ def login():
         return "Success",200
 
 if __name__ =='__main__':  
-    app.run(host="0.0.0.0", debug = True, port=5000)
+    import os
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host="0.0.0.0", debug=False, port=port)
