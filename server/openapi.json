@@ -13,10 +13,6 @@
       {
         "url": "https://gpt-auth-ch20.onrender.com",
         "description": "Production backend API on Render"
-      },
-      {
-        "url": "http://localhost:5000",
-        "description": "Local development server"
       }
     ],
     "paths": {

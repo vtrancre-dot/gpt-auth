@@ -43,7 +43,7 @@ def get_credentials():
     if "id" in data:
         id = data['id']
         getAdmin = Admin.query.filter_by(id=id).first()
-        redirect_uri = DOMAIN_URL + "/login"
+        redirect_uri = DOMAIN_URL + "/login?id=" + getAdmin.id
         google = OAuth2Session(
             getAdmin.google_client_id, scope=GOOGLE_SCOPE, redirect_uri=redirect_uri)
         login_url, state = google.authorization_url(GOOGLE_AUTH_BASE_URL)
@@ -57,7 +57,7 @@ def get_credentials():
         google_client_id = data["googleId"]
         google_client_secret = data["googleSecret"]
         url_host = urllib.parse.urlsplit(request.url).hostname
-        redirect_uri = DOMAIN_URL + "/login"
+        redirect_uri = DOMAIN_URL + "/login?id=" + adminId
         google = OAuth2Session(
             google_client_id, scope=GOOGLE_SCOPE, redirect_uri=redirect_uri)
         login_url, state = google.authorization_url(GOOGLE_AUTH_BASE_URL)
@@ -81,41 +81,60 @@ def oauth_slug(slug):
 
 @app.route("/login", methods=['GET'])
 def login():
+        # Get the authorization code from the callback
+        code = request.args.get("code")
+        state = request.args.get("state")
+        
+        if not code:
+            return "Missing authorization code", 400
+            
+        # Get admin ID from state or request
         adminId = request.args.get("id")
-        if request.args.get("url") != None:
-            request_url = request.args.get("url")
-            parsed_url = urlparse(request_url)
-            query_params = parse_qs(parsed_url.query)
-            code = query_params.get('code', [None])[0]
-        else:
-            request_url = request.url
-            code = None
-        url_host = urllib.parse.urlsplit(request.url).hostname
-        redirect_uri = "https://"+url_host+"/google_callback"
-        getAdmin = Admin.query.filter_by(id=adminId).first()
-        redirect_uri = DOMAIN_URL + "/login"
-        google = OAuth2Session(
-            getAdmin.google_client_id, scope=GOOGLE_SCOPE, redirect_uri=redirect_uri)
-        token_url = "https://www.googleapis.com/oauth2/v4/token"
-        welcome = False
-        google.fetch_token(token_url, client_secret=getAdmin.google_client_secret,
-                            code=code)
-        response = google.get(
-            'https://www.googleapis.com/oauth2/v1/userinfo').json()
-        email = response["email"].lower()
-        googleId = str(response["id"])
-        name = response["name"]
-       
-        getUser = User.query.filter_by(email=email).first()
-        if getUser == None:
-            getUser = User(email=email,google_id=googleId, name=name, admin_id=getAdmin.id)
-            db.session.add(getUser)
-            db.session.commit()
-        else:
-            getUser.google_id = googleId
-            db.session.commit()
-        login_user(getUser, remember=True)
-        return "Success",200
+        if not adminId and state:
+            # Try to extract admin ID from state if available
+            # For now, we'll need to handle this differently
+            return "Missing admin ID", 400
+            
+        if not adminId:
+            return "Missing admin ID", 400
+            
+        try:
+            getAdmin = Admin.query.filter_by(id=adminId).first()
+            if not getAdmin:
+                return "Admin not found", 404
+                
+            redirect_uri = DOMAIN_URL + "/login"
+            google = OAuth2Session(
+                getAdmin.google_client_id, scope=GOOGLE_SCOPE, redirect_uri=redirect_uri)
+            token_url = "https://www.googleapis.com/oauth2/v4/token"
+            
+            # Fetch the token
+            google.fetch_token(token_url, client_secret=getAdmin.google_client_secret,
+                                code=code)
+            
+            # Get user info
+            response = google.get(
+                'https://www.googleapis.com/oauth2/v1/userinfo').json()
+            email = response["email"].lower()
+            googleId = str(response["id"])
+            name = response["name"]
+           
+            # Create or update user
+            getUser = User.query.filter_by(email=email).first()
+            if getUser == None:
+                getUser = User(email=email,google_id=googleId, name=name, admin_id=getAdmin.id)
+                db.session.add(getUser)
+                db.session.commit()
+            else:
+                getUser.google_id = googleId
+                db.session.commit()
+                
+            login_user(getUser, remember=True)
+            return "Success",200
+            
+        except Exception as e:
+            print(f"Error in login: {str(e)}")
+            return f"Authentication failed: {str(e)}", 500
 
 if __name__ =='__main__':  
     import os
