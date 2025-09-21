@@ -7,8 +7,12 @@
     },
     "servers": [
       {
+        "url": "https://gpt-auth-frontend.onrender.com",
+        "description": "Production frontend server on Render"
+      },
+      {
         "url": "https://gpt-auth-ch20.onrender.com",
-        "description": "Production server on Render"
+        "description": "Production backend API on Render"
       },
       {
         "url": "http://localhost:5000",

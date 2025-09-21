@@ -4,7 +4,7 @@ export async function POST(request) {
   try {
     const body = await request.json()
     
-    const response = await fetch('http://localhost:5000/get_credentials', {
+    const response = await fetch('https://gpt-auth-ch20.onrender.com/get_credentials', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
