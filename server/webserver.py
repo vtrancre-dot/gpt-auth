@@ -43,11 +43,12 @@ def get_credentials():
     if "id" in data:
         id = data['id']
         getAdmin = Admin.query.filter_by(id=id).first()
-        redirect_uri = DOMAIN_URL + "/login?id=" + getAdmin.id
+        redirect_uri = DOMAIN_URL + "/login"
         google = OAuth2Session(
             getAdmin.google_client_id, scope=GOOGLE_SCOPE, redirect_uri=redirect_uri)
         login_url, state = google.authorization_url(GOOGLE_AUTH_BASE_URL)
-        getAdmin.google_login_url = login_url
+        # Store admin ID in the state parameter
+        getAdmin.google_login_url = login_url + "&state=" + getAdmin.id
         db.session.commit()
     else:
         adminId = secrets.token_urlsafe(12)
@@ -57,11 +58,12 @@ def get_credentials():
         google_client_id = data["googleId"]
         google_client_secret = data["googleSecret"]
         url_host = urllib.parse.urlsplit(request.url).hostname
-        redirect_uri = DOMAIN_URL + "/login?id=" + adminId
+        redirect_uri = DOMAIN_URL + "/login"
         google = OAuth2Session(
             google_client_id, scope=GOOGLE_SCOPE, redirect_uri=redirect_uri)
         login_url, state = google.authorization_url(GOOGLE_AUTH_BASE_URL)
-        getAdmin = Admin(id=adminId,client_id=client_id,client_secret=client_secret,google_login_url=login_url,google_client_id=google_client_id,google_client_secret=google_client_secret)
+        # Store admin ID in the state parameter
+        getAdmin = Admin(id=adminId,client_id=client_id,client_secret=client_secret,google_login_url=login_url + "&state=" + adminId,google_client_id=google_client_id,google_client_secret=google_client_secret)
         db.session.add(getAdmin)
         db.session.commit()
     return jsonify(id=getAdmin.client_id,secret=getAdmin.client_secret,adminId=getAdmin.id)
@@ -88,12 +90,11 @@ def login():
         if not code:
             return "Missing authorization code", 400
             
-        # Get admin ID from state or request
+        # Get admin ID from state parameter
         adminId = request.args.get("id")
         if not adminId and state:
-            # Try to extract admin ID from state if available
-            # For now, we'll need to handle this differently
-            return "Missing admin ID", 400
+            # Extract admin ID from state parameter
+            adminId = state
             
         if not adminId:
             return "Missing admin ID", 400
